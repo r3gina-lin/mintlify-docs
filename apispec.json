@@ -1,0 +1,1926 @@
+{   "components": {
+    "schemas": {
+      "BaseQuestion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the question"
+          },
+          "question": {
+            "type": "string",
+            "description": "The question text"
+          },
+          "question_type": {
+            "$ref": "#/components/schemas/QuestionType",
+            "description": "Type of question (multiple_choice, open, rating, or multiselect)"
+          },
+          "required": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether an answer is required"
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Position in the survey (zero-based)"
+          },
+          "survey_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the survey this question belongs to"
+          }
+        },
+        "required": ["question_type", "question"]
+      },
+      "BaseQuestionResponse": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "order": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "question_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "survey_response_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/QuestionType",
+            "description": "Type of question this response corresponds to"
+          }
+        },
+        "required": [
+          "question_id",
+          "type"
+        ],
+        "type": "object"
+      },
+      "MultipleChoiceQuestion": {
+        "allOf": [
+          { "$ref": "#/components/schemas/BaseQuestion" },
+          {
+            "type": "object",
+            "properties": {
+              "question_type": {
+                "$ref": "#/components/schemas/QuestionType",
+                "enum": ["multiple_choice"],
+                "description": "Must be 'multiple_choice'"
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Choice option text"
+                },
+                "minItems": 2,
+                "description": "Array of choice options",
+                "example": ["Social Media", "Friend", "Advertisement"]
+              }
+            },
+            "required": ["options"]
+          }
+        ],
+        "example": {
+          "id": "q1-uuid",
+          "question_type": "multiple_choice",
+          "question": "How did you hear about us?",
+          "options": ["Social Media", "Friend", "Advertisement"],
+          "required": true,
+          "order": 0
+        }
+      },
+      "MultipleChoiceQuestionResponse": {
+        "title": "Multiple Choice Response",
+        "description": "Response to a multiple choice question",
+        "allOf": [
+          { "$ref": "#/components/schemas/BaseQuestionResponse" },
+          {
+            "properties": {
+              "selected_option_index": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Index of the selected option (zero-based)"
+              }
+            },
+            "required": ["selected_option_index"]
+          }
+        ]
+      },
+      "MultiselectQuestion": {
+        "allOf": [
+          { "$ref": "#/components/schemas/BaseQuestion" },
+          {
+            "type": "object",
+            "properties": {
+              "question_type": {
+                "$ref": "#/components/schemas/QuestionType",
+                "enum": ["multiselect"],
+                "description": "Must be 'multiselect'"
+              },
+              "max_choices": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Maximum number of options that can be selected",
+                "example": 2
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Choice option text"
+                },
+                "minItems": 2,
+                "description": "Array of choice options",
+                "example": ["Email", "Calendar", "Tasks", "Notes"]
+              }
+            },
+            "required": ["options", "max_choices"]
+          }
+        ],
+        "example": {
+          "id": "q4-uuid",
+          "question_type": "multiselect",
+          "question": "Which features do you use?",
+          "options": ["Email", "Calendar", "Tasks", "Notes"],
+          "max_choices": 2,
+          "required": true,
+          "order": 3
+        }
+      },
+      "MultiselectQuestionResponse": {
+        "title": "Multiselect Response",
+        "description": "Response to a multiselect question",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseQuestionResponse"
+          },
+          {
+            "properties": {
+              "selected_option_indices": {
+                "items": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "minItems": 1,
+                "type": "array"
+              }
+            },
+            "required": [
+              "selected_option_indices"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "OpenQuestion": {
+        "allOf": [
+          { "$ref": "#/components/schemas/BaseQuestion" },
+          {
+            "type": "object",
+            "properties": {
+              "question_type": {
+                "$ref": "#/components/schemas/QuestionType",
+                "enum": ["open"],
+                "description": "Must be 'open'"
+              },
+              "follow_up_instructions": {
+                "type": "string",
+                "description": "Instructions for follow-up questions",
+                "example": "Please elaborate on your answer"
+              },
+              "number_follow_ups": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of follow-up questions to ask",
+                "example": 2
+              }
+            }
+          }
+        ],
+        "example": {
+          "id": "q2-uuid",
+          "question_type": "open",
+          "question": "What do you think about our service?",
+          "number_follow_ups": 2,
+          "follow_up_instructions": "Please elaborate",
+          "required": true,
+          "order": 1
+        }
+      },
+      "OpenQuestionResponse": {
+        "title": "Open-Ended Response",
+        "description": "Response to an open-ended question",
+        "allOf": [
+          { "$ref": "#/components/schemas/BaseQuestionResponse" },
+          {
+            "properties": {
+              "text_response": {
+                "type": "string",
+                "description": "The text answer provided"
+              },
+              "follow_up_order": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "For follow-up questions, the index of this follow-up"
+              }
+            },
+            "required": ["text_response"]
+          }
+        ]
+      },
+      "QuestionType": {
+        "type": "string",
+        "enum": [
+          "multiple_choice",
+          "open",
+          "multiselect",
+          "rating"
+        ],
+        "type": "string"
+      },
+      "RatingQuestion": {
+        "allOf": [
+          { "$ref": "#/components/schemas/BaseQuestion" },
+          {
+            "type": "object",
+            "properties": {
+              "question_type": {
+                "$ref": "#/components/schemas/QuestionType",
+                "enum": ["rating"],
+                "description": "Must be 'rating'"
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Rating label"
+                },
+                "minItems": 2,
+                "description": "Array of rating options",
+                "example": ["Poor", "Fair", "Good", "Excellent"]
+              }
+            },
+            "required": ["options"]
+          }
+        ],
+        "example": {
+          "id": "q3-uuid",
+          "question_type": "rating",
+          "question": "How would you rate our service?",
+          "options": ["Poor", "Fair", "Good", "Excellent"],
+          "required": true,
+          "order": 2
+        }
+      },
+      "RatingQuestionResponse": {
+        "title": "Rating Response",
+        "description": "Response to a rating question",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseQuestionResponse"
+          },
+          {
+            "properties": {
+              "selected_option_index": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "selected_option_index"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "Survey": {
+        "properties": {
+          "business_description": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "learning_description": {
+            "type": "string"
+          },
+          "questions": {
+            "items": {
+              "oneOf": [
+                {
+                  "title": "Multiple Choice",
+                  "description": "Single selection from multiple options",
+                  "allOf": [
+                    { "$ref": "#/components/schemas/MultipleChoiceQuestion" }
+                  ]
+                },
+                {
+                  "title": "Open-Ended",
+                  "description": "Free text response with optional follow-ups",
+                  "allOf": [
+                    { "$ref": "#/components/schemas/OpenQuestion" }
+                  ]
+                },
+                {
+                  "title": "Rating",
+                  "description": "Rating scale with custom labels",
+                  "allOf": [
+                    { "$ref": "#/components/schemas/RatingQuestion" }
+                  ]
+                },
+                {
+                  "title": "Multiselect",
+                  "description": "Multiple selections with max choices limit",
+                  "allOf": [
+                    { "$ref": "#/components/schemas/MultiselectQuestion" }
+                  ]
+                }
+              ],
+              "discriminator": {
+                "propertyName": "question_type",
+                "mapping": {
+                  "multiple_choice": "#/components/schemas/MultipleChoiceQuestion",
+                  "open": "#/components/schemas/OpenQuestion",
+                  "rating": "#/components/schemas/RatingQuestion",
+                  "multiselect": "#/components/schemas/MultiselectQuestion"
+                }
+              }
+            },
+            "type": "array"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "type": "object"
+      },
+      "SurveyResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the response"
+          },
+          "survey_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the survey being answered"
+          },
+          "user_id": {
+            "type": "string",
+            "description": "Identifier of the user submitting responses"
+          },
+          "response_metadata": {
+            "type": "object",
+            "description": "Additional metadata about the response session"
+          },
+          "responses": {
+            "type": "array",
+            "description": "List of question responses",
+            "items": {
+              "oneOf": [
+                {
+                  "title": "Multiple Choice Response",
+                  "description": "Response to a multiple choice question",
+                  "allOf": [
+                    { "$ref": "#/components/schemas/MultipleChoiceQuestionResponse" }
+                  ]
+                },
+                {
+                  "title": "Open-Ended Response",
+                  "description": "Response to an open-ended question",
+                  "allOf": [
+                    { "$ref": "#/components/schemas/OpenQuestionResponse" }
+                  ]
+                },
+                {
+                  "title": "Rating Response",
+                  "description": "Response to a rating question",
+                  "allOf": [
+                    { "$ref": "#/components/schemas/RatingQuestionResponse" }
+                  ]
+                },
+                {
+                  "title": "Multiselect Response",
+                  "description": "Response to a multiselect question",
+                  "allOf": [
+                    { "$ref": "#/components/schemas/MultiselectQuestionResponse" }
+                  ]
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "multiple_choice": "#/components/schemas/MultipleChoiceQuestionResponse",
+                  "open": "#/components/schemas/OpenQuestionResponse",
+                  "rating": "#/components/schemas/RatingQuestionResponse",
+                  "multiselect": "#/components/schemas/MultiselectQuestionResponse"
+                }
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the response was submitted"
+          }
+        },
+        "required": ["user_id"]
+      },
+      "QuestionAnswerResponse": {
+        "type": "object",
+        "properties": {
+          "next_question": {
+            "properties": {
+              "question": {
+                "oneOf": [
+                  {
+                    "title": "Open-Ended Question",
+                    "allOf": [
+                      { "$ref": "#/components/schemas/OpenQuestion" }
+                    ]
+                  },
+                  {
+                    "title": "Multiple Choice Question",
+                    "allOf": [
+                      { "$ref": "#/components/schemas/MultipleChoiceQuestion" }
+                    ]
+                  },
+                  {
+                    "title": "Rating Question",
+                    "allOf": [
+                      { "$ref": "#/components/schemas/RatingQuestion" }
+                    ]
+                  },
+                  {
+                    "title": "Multiselect Question",
+                    "allOf": [
+                      { "$ref": "#/components/schemas/MultiselectQuestion" }
+                    ]
+                  }
+                ]
+              }
+            },
+            "nullable": true
+          },
+          "response": {
+            "oneOf": [
+              {
+                "title": "Open-Ended Response",
+                "allOf": [
+                  { "$ref": "#/components/schemas/OpenQuestionResponse" }
+                ]
+              },
+              {
+                "title": "Multiple Choice Response",
+                "allOf": [
+                  { "$ref": "#/components/schemas/MultipleChoiceQuestionResponse" }
+                ]
+              },
+              {
+                "title": "Rating Response",
+                "allOf": [
+                  { "$ref": "#/components/schemas/RatingQuestionResponse" }
+                ]
+              },
+              {
+                "title": "Multiselect Response",
+                "allOf": [
+                  { "$ref": "#/components/schemas/MultiselectQuestionResponse" }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "NextQuestionResponse": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "oneOf": [
+              {
+                "title": "Open-Ended Question",
+                "allOf": [
+                  { "$ref": "#/components/schemas/OpenQuestion" }
+                ]
+              },
+              {
+                "title": "Multiple Choice Question",
+                "allOf": [
+                  { "$ref": "#/components/schemas/MultipleChoiceQuestion" }
+                ]
+              },
+              {
+                "title": "Rating Question",
+                "allOf": [
+                  { "$ref": "#/components/schemas/RatingQuestion" }
+                ]
+              },
+              {
+                "title": "Multiselect Question",
+                "allOf": [
+                  { "$ref": "#/components/schemas/MultiselectQuestion" }
+                ]
+              }
+            ]
+          }
+        },
+        "nullable": true
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "status_code": {
+            "type": "integer"
+          }
+        }
+      },
+      "DataFrameResponse": {
+        "type": "object",
+        "required": ["data", "metadata"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "required": ["column_keys", "question_data"],
+            "properties": {
+              "column_keys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "question_data": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "title": "Open-Ended Question",
+                      "allOf": [
+                        { "$ref": "#/components/schemas/OpenQuestion" }
+                      ]
+                    },
+                    {
+                      "title": "Multiple Choice Question",
+                      "allOf": [
+                        { "$ref": "#/components/schemas/MultipleChoiceQuestion" }
+                      ]
+                    },
+                    {
+                      "title": "Rating Question",
+                      "allOf": [
+                        { "$ref": "#/components/schemas/RatingQuestion" }
+                      ]
+                    },
+                    {
+                      "title": "Multiselect Question",
+                      "allOf": [
+                        { "$ref": "#/components/schemas/MultiselectQuestion" }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "SurveyList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Survey"
+        }
+      },
+      "SurveyResponseList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/SurveyResponse"
+        }
+      },
+      "QuestionList": {
+        "type": "array",
+        "items": {
+          "oneOf": [
+            {
+              "title": "Multiple Choice",
+              "description": "Single selection from multiple options",
+              "allOf": [
+                { "$ref": "#/components/schemas/MultipleChoiceQuestion" }
+              ]
+            },
+            {
+              "title": "Open-Ended",
+              "description": "Free text response with optional follow-ups",
+              "allOf": [
+                { "$ref": "#/components/schemas/OpenQuestion" }
+              ]
+            },
+            {
+              "title": "Rating",
+              "description": "Rating scale with custom labels",
+              "allOf": [
+                { "$ref": "#/components/schemas/RatingQuestion" }
+              ]
+            },
+            {
+              "title": "Multiselect",
+              "description": "Multiple selections with max choices limit",
+              "allOf": [
+                { "$ref": "#/components/schemas/MultiselectQuestion" }
+              ]
+            }
+          ],
+          "discriminator": {
+            "propertyName": "question_type",
+            "mapping": {
+              "multiple_choice": "#/components/schemas/MultipleChoiceQuestion",
+              "open": "#/components/schemas/OpenQuestion",
+              "rating": "#/components/schemas/RatingQuestion",
+              "multiselect": "#/components/schemas/MultiselectQuestion"
+            }
+          }
+        }
+      },
+      "InitializeResponse": {
+        "type": "object",
+        "properties": {
+          "response_metadata": {
+            "type": "object"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": ["user_id"]
+      },
+      "ResponseRequest": {
+        "type": "object",
+        "properties": {
+          "response_metadata": {
+            "type": "object"
+          },
+          "responses": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                { "$ref": "#/components/schemas/OpenQuestionResponse" },
+                { "$ref": "#/components/schemas/MultipleChoiceQuestionResponse" },
+                { "$ref": "#/components/schemas/RatingQuestionResponse" },
+                { "$ref": "#/components/schemas/MultiselectQuestionResponse" }
+              ]
+            }
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": ["user_id", "responses"]
+      },
+      "InitializeRequest": {
+        "type": "object",
+        "properties": {
+          "response_metadata": {
+            "type": "object",
+            "example": {
+              "session_type": "chatbot"
+            }
+          },
+          "user_id": {
+            "type": "string",
+            "example": "user123"
+          }
+        },
+        "required": ["user_id"]
+      },
+      "QuestionAnswerRequest": {
+        "oneOf": [
+          {
+            "title": "Open-Ended Response",
+            "allOf": [
+              { "$ref": "#/components/schemas/OpenQuestionResponse" }
+            ]
+          },
+          {
+            "title": "Multiple Choice Response",
+            "allOf": [
+              { "$ref": "#/components/schemas/MultipleChoiceQuestionResponse" }
+            ]
+          },
+          {
+            "title": "Rating Response",
+            "allOf": [
+              { "$ref": "#/components/schemas/RatingQuestionResponse" }
+            ]
+          },
+          {
+            "title": "Multiselect Response",
+            "allOf": [
+              { "$ref": "#/components/schemas/MultiselectQuestionResponse" }
+            ]
+          }
+        ]
+      },
+      "ValidationError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Validation error"
+          },
+          "details": {
+            "type": "string",
+            "example": "Missing required field: title"
+          }
+        }
+      },
+      "NotFoundError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Not found"
+          },
+          "details": {
+            "type": "string",
+            "example": "Survey not found"
+          }
+        }
+      },
+      "ServerError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Internal server error"
+          },
+          "message": {
+            "type": "string",
+            "example": "Failed to process request"
+          }
+        }
+      },
+      "ReorderRequest": {
+        "type": "object",
+        "properties": {
+          "new_order": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "New position for the question (zero-based)"
+          }
+        },
+        "required": ["new_order"]
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "contact": {
+      "name": "API Support",
+      "url": "https://www.example.com/support"
+    },
+    "description": "API for managing surveys and questions",
+    "title": "Surveys API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/": {
+      "get": {
+        "description": "Returns all surveys owned by the authenticated user, ordered by creation date (newest first).",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyList"
+                }
+              }
+            },
+            "description": "List of surveys"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Server error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List all surveys.",
+        "tags": [
+          "Surveys"
+        ]
+      }
+    },
+    "/api/surveys/": {
+      "post": {
+        "description": "\n    Creates a new survey with optional questions. The authenticated user will be set as the owner.\n    \n    Questions can be provided in the initial creation and will be ordered as specified in the array.\n    Each question must specify its type and required fields based on the type:\n    \n    - Open questions: question_type, question, number_follow_ups (optional)\n    - Multiple choice: question_type, question, options\n    - Rating: question_type, question, options\n    - Multiselect: question_type, question, options, max_choices\n    ",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "basic_request": {
+                  "summary": "Without Questions",
+                  "value": {
+                    "title": "Customer Feedback",
+                    "business_description": "Gathering feedback about our service",
+                    "learning_description": "Understanding customer satisfaction",
+                    "questions": []
+                  }
+                },
+                "request_with_questions": {
+                  "summary": "With Questions",
+                  "value": {
+                    "title": "Product Feedback",
+                    "business_description": "Gathering feedback about our new product",
+                    "questions": [
+                      {
+                        "options": [
+                          "Very Satisfied",
+                          "Satisfied",
+                          "Neutral",
+                          "Dissatisfied"
+                        ],
+                        "question": "How satisfied are you with the product?",
+                        "question_type": "multiple_choice"
+                      },
+                      {
+                        "number_follow_ups": 2,
+                        "question": "What improvements would you suggest?",
+                        "question_type": "open"
+                      }
+                    ]
+                  }
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Survey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Survey"
+                }
+              }
+            },
+            "description": "Created survey"
+          },
+          "422": {
+            "description": "Invalid survey data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Create a new survey.",
+        "tags": [
+          "Surveys"
+        ]
+      }
+    },
+    "/api/surveys/{survey_id}": {
+      "delete": {
+        "description": "\n    Deletes a survey and all its associated data:\n    - All questions\n    - All responses\n    - All chat sessions\n    - All reports\n    \n    This action cannot be undone.\n    ",
+        "parameters": [
+          {
+            "description": "Unique identifier of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Survey"
+                }
+              }
+            },
+            "description": "Deleted survey details"
+          },
+          "404": {
+            "description": "Survey not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Delete a specific survey.",
+        "tags": [
+          "Surveys"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a single survey by ID, including all its questions.",
+        "parameters": [
+          {
+            "description": "Unique identifier of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Survey"
+                }
+              }
+            },
+            "description": "Survey details"
+          },
+          "404": {
+            "description": "Survey not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get a specific survey by ID.",
+        "tags": [
+          "Surveys"
+        ]
+      },
+      "put": {
+        "description": "\n    Updates an existing survey. Can update basic survey information and/or questions.\n    \n    If questions are provided, all existing questions will be replaced with the new set.\n    To modify individual questions, use the questions API endpoints instead.\n    ",
+        "parameters": [
+          {
+            "description": "Unique identifier of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "update_basic": {
+                  "summary": "Update Basic Info",
+                  "value": {
+                    "business_description": "Updated business context",
+                    "title": "Updated Survey Title"
+                  }
+                },
+                "update_with_questions": {
+                  "summary": "Update with Questions",
+                  "value": {
+                    "questions": [
+                      {
+                        "options": [
+                          "1",
+                          "2",
+                          "3",
+                          "4",
+                          "5"
+                        ],
+                        "question": "Rate our service",
+                        "question_type": "rating"
+                      }
+                    ],
+                    "title": "Updated Survey"
+                  }
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Survey"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Survey"
+                }
+              }
+            },
+            "description": "Updated survey"
+          },
+          "404": {
+            "description": "Survey not found"
+          },
+          "422": {
+            "description": "Invalid survey data"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update a specific survey.",
+        "tags": [
+          "Surveys"
+        ]
+      }
+    },
+    "/api/surveys/{survey_id}/questions": {
+      "get": {
+        "description": "Retrieves all questions belonging to a specific survey in their defined order.",
+        "parameters": [
+          {
+            "description": "Unique identifier of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionList"
+                }
+              }
+            },
+            "description": "List of questions in the survey"
+          },
+          "404": {
+            "description": "Survey not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get all questions of a survey.",
+        "tags": [
+          "Questions"
+        ]
+      },
+      "post": {
+        "description": "\n    Creates a new question in the specified survey. The question type determines the required fields:\n    \n    - Open questions require: question_type, question, number_follow_ups (optional)\n    - Multiple choice questions require: question_type, question, options\n    - Rating questions require: question_type, question, options\n    - Multiselect questions require: question_type, question, options, max_choices\n    \n    Questions can optionally specify their order. If not specified, the question will be added at the end.\n    ",
+        "parameters": [
+          {
+            "description": "Unique identifier of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/MultipleChoiceQuestion",
+                    "title": "Multiple Choice Question",
+                    "description": "Single selection from multiple options"
+                  },
+                  {
+                    "$ref": "#/components/schemas/OpenQuestion",
+                    "title": "Open Question",
+                    "description": "Free text response with optional follow-ups"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RatingQuestion",
+                    "title": "Rating Question",
+                    "description": "Rating scale with custom labels"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MultiselectQuestion",
+                    "title": "Multiselect Question",
+                    "description": "Multiple selections with max choices limit"
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionList"
+                }
+              }
+            },
+            "description": "Question created successfully"
+          },
+          "404": {
+            "description": "Survey not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid question data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Add a new question to a survey.",
+        "tags": [
+          "Questions"
+        ]
+      }
+    },
+    "/api/surveys/{survey_id}/questions/{question_id}": {
+      "delete": {
+        "description": "\n    Deletes a question from the survey and reorders remaining questions to maintain\n    contiguous ordering starting from 0.\n    ",
+        "parameters": [
+          {
+            "description": "Unique identifier of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Unique identifier of the question",
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionList"
+                }
+              }
+            },
+            "description": "Deleted question details"
+          },
+          "404": {
+            "description": "Survey or question not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Delete a specific question from a survey.",
+        "tags": [
+          "Questions"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a single question by its ID from the specified survey.",
+        "parameters": [
+          {
+            "description": "Unique identifier of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Unique identifier of the question",
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionList"
+                }
+              }
+            },
+            "description": "Question details"
+          },
+          "404": {
+            "description": "Survey or question not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get a specific question of a survey.",
+        "tags": [
+          "Questions"
+        ]
+      },
+      "put": {
+        "description": "\n    Updates an existing question in the survey. The question type can be changed, which will create\n    a new question of the specified type while preserving the ID and order.\n    \n    When updating a question:\n    - The order can be changed, which will shift other questions accordingly\n    - The question type can be changed, requiring all necessary fields for the new type\n    - For the same question type, only specified fields will be updated\n    ",
+        "parameters": [
+          {
+            "description": "Unique identifier of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Unique identifier of the question",
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "change_type": {
+                  "summary": "Change Question Type",
+                  "value": {
+                    "options": [
+                      "Option 1",
+                      "Option 2",
+                      "Option 3"
+                    ],
+                    "question": "Updated question text",
+                    "question_type": "multiple_choice"
+                  }
+                },
+                "update_order": {
+                  "summary": "Update Question Order",
+                  "value": {
+                    "order": 2
+                  }
+                }
+              },
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/OpenQuestion"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MultipleChoiceQuestion"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RatingQuestion"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MultiselectQuestion"
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionList"
+                }
+              }
+            },
+            "description": "Updated question details"
+          },
+          "404": {
+            "description": "Survey or question not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid question data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update a specific question.",
+        "tags": [
+          "Questions"
+        ]
+      }
+    },
+    "/api/surveys/{survey_id}/questions/{question_id}/reorder": {
+      "put": {
+        "description": "\n    Moves a question to a new position in the survey's question order.\n    Other questions are shifted accordingly to maintain contiguous ordering.\n    Returns the full list of questions in their new order.\n    ",
+        "parameters": [
+          {
+            "description": "Unique identifier of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Unique identifier of the question",
+            "in": "path",
+            "name": "question_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionList"
+                }
+              }
+            },
+            "description": "List of all questions in their new order"
+          },
+          "422": {
+            "description": "Invalid new_order value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Survey or question not found"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Reorder a question within a survey.",
+        "tags": [
+          "Questions"
+        ]
+      }
+    },
+    "/api/surveys/{survey_id}/responses/": {
+      "get": {
+        "description": "Returns all responses for a survey, ordered by submission time (newest first).",
+        "parameters": [
+          {
+            "description": "ID of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyResponseList"
+                }
+              }
+            },
+            "description": "List of survey responses"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get all responses for a survey.",
+        "tags": [
+          "Responses"
+        ]
+      },
+      "post": {
+        "description": "\n\tSubmit a complete response for a survey with answers to all required questions.\n\t\n\tEach response must include:\n\t- For open questions: text_response and question_text\n\t- For multiple choice/rating: selected_option_index (0-based)\n\t- For multiselect: selected_option_indices (array of 0-based indices)\n\t\n\tThe system will validate:\n\t- All required questions are answered\n\t- Response options are valid for each question type\n\t- Follow-up questions are properly handled\n\t",
+        "parameters": [
+          {
+            "description": "ID of the survey being answered",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResponseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyResponse"
+                }
+              }
+            },
+            "description": "Survey response recorded successfully"
+          },
+          "422": {
+            "description": "Invalid response data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Survey not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Submit a new response for a survey.",
+        "tags": [
+          "Responses"
+        ]
+      }
+    },
+    "/api/surveys/{survey_id}/responses/dataframe": {
+      "get": {
+        "description": "\n\tReturns survey responses in a tabular format suitable for analysis:\n\t- Each row represents one survey response\n\t- Columns include: response_id, user_id, timestamp, and one column per question\n\t- Question responses are formatted based on type:\n\t\t- Open: text response\n\t\t- Multiple choice/Rating: selected option text\n\t\t- Multiselect: array of selected option texts\n\t",
+        "parameters": [
+          {
+            "description": "ID of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Survey responses in dataframe format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataFrameResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get all responses for a survey as a pandas DataFrame.",
+        "tags": [
+          "Responses"
+        ]
+      }
+    },
+    "/api/surveys/{survey_id}/responses/initialize": {
+      "post": {
+        "description": "\n\tStart a new survey response session. This creates a response record that can be\n\tfilled out question by question using the /answer endpoint.\n\t\n\tUse this for:\n\t- Progressive form submissions\n\t- Chatbot-style survey taking\n\t- Saving partial responses\n\t",
+        "parameters": [
+          {
+            "description": "ID of the survey to start",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitializeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyResponse"
+                }
+              }
+            },
+            "description": "Survey response session initialized"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Initialize a new survey response session.",
+        "tags": [
+          "Responses"
+        ]
+      }
+    },
+    "/api/surveys/{survey_id}/responses/{response_id}": {
+      "delete": {
+        "description": "\n\tPermanently deletes a survey response and all its question responses.\n\tReturns the deleted response data.\n\t\n\tThis action cannot be undone.\n\t",
+        "parameters": [
+          {
+            "description": "ID of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "ID of the response to delete",
+            "in": "path",
+            "name": "response_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyResponse"
+                }
+              }
+            },
+            "description": "Deleted response data"
+          },
+          "404": {
+            "description": "Survey or response not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Delete a specific response for a survey.",
+        "tags": [
+          "Responses"
+        ]
+      }
+    },
+    "/api/surveys/{survey_id}/responses/{response_id}/answer": {
+      "post": {
+        "description": "\n\tSubmit an answer for a single question in a survey response session.\n\tReturns both the recorded response and the next question to answer.\n\t\n\tThe next question will be:\n\t- The next unanswered required question\n\t- A follow-up question if applicable\n\t- null if all questions are answered\n\t",
+        "parameters": [
+          {
+            "description": "ID of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "ID of the response session",
+            "in": "path",
+            "name": "response_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionAnswerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionAnswerResponse"
+                }
+              }
+            },
+            "description": "Answer recorded and next question retrieved"
+          },
+          "422": {
+            "description": "Invalid answer format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Add a single question response.",
+        "tags": [
+          "Responses"
+        ]
+      }
+    },
+    "/api/surveys/{survey_id}/responses/{response_id}/next-question": {
+      "get": {
+        "description": "\n\tReturns the next question that needs to be answered in a survey response session.\n\t\n\tThe next question is determined by:\n\t1. First unanswered required question in order\n\t2. Follow-up questions for answered open questions\n\t3. Returns null when all questions (including follow-ups) are answered\n\t\n\tFor follow-up questions, additional fields are included:\n\t- is_follow_up: true\n\t- follow_up_order: index of the follow-up (0-based)\n\t- question: follow-up instructions\n\t",
+        "parameters": [
+          {
+            "description": "ID of the survey",
+            "in": "path",
+            "name": "survey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "ID of the response session",
+            "in": "path",
+            "name": "response_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Next question to answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NextQuestionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get the next question based on current responses.",
+        "tags": [
+          "Responses"
+        ]
+      }
+    }
+  }
+}
+
